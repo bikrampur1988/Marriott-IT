@@ -1,0 +1,8 @@
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/base/BaseTest.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/config/SettingsReader.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/driver/DriverFactory.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/pages/ActivateOnlineAccountPage.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/pages/FindaHotelPage.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/pages/LookUpMemberNumberPage.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/pages/MarriotBonVoyDashboard.java
+/home/amin/projects/Marriott-IT/automation/ui-tests/src/main/java/com/marriott/ui/pages/SignInPage.java

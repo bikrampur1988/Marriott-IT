@@ -1,0 +1,5 @@
+com/marriott/ui/tests/regressionTests/ActivateOnlineAccountTest.class
+com/marriott/ui/tests/regressionTests/SignInTest.class
+com/marriott/ui/tests/regressionTests/LookUpMemberNumberTest.class
+com/marriott/ui/tests/framework/SettingsReaderTest.class
+com/marriott/ui/tests/regressionTests/DashboardTest.class

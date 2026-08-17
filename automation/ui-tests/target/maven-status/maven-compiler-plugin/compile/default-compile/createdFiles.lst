@@ -1,0 +1,8 @@
+com/marriott/ui/pages/FindaHotelPage.class
+com/marriott/ui/driver/DriverFactory.class
+com/marriott/ui/base/BaseTest.class
+com/marriott/ui/pages/LookUpMemberNumberPage.class
+com/marriott/ui/pages/ActivateOnlineAccountPage.class
+com/marriott/ui/config/SettingsReader.class
+com/marriott/ui/pages/MarriotBonVoyDashboard.class
+com/marriott/ui/pages/SignInPage.class
