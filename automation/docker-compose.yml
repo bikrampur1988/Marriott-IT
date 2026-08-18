@@ -1,0 +1,333 @@
+# ============================================================
+# Marriott Automation - Docker Compose Configuration
+# ============================================================
+#
+# Purpose:
+# Defines the Docker infrastructure required to execute the
+# Marriott Automation Framework through Jenkins and
+# Selenium Grid.
+#
+# Services:
+#
+#   1. Jenkins Controller
+#      - Jenkins LTS
+#      - JDK 21
+#      - Maven (installed through Dockerfile.jenkins)
+#
+#   2. Selenium Grid Hub
+#      - Receives RemoteWebDriver requests
+#      - Routes browser sessions to Selenium nodes
+#
+#   3. Selenium Chrome Node
+#      - Runs the actual Chrome browser sessions
+#
+# Architecture:
+#
+# GitHub
+#    |
+#    v
+# Jenkins
+#    |
+#    | Maven / TestNG
+#    v
+# Marriott Automation Framework
+#    |
+#    | RemoteWebDriver
+#    v
+# Selenium Grid Hub
+#    |
+#    v
+# Chrome Node
+#    |
+#    v
+# Chrome Browser
+#
+# ============================================================
+
+
+services:
+
+  # ==========================================================
+  # JENKINS CONTROLLER
+  # ==========================================================
+  #
+  # Responsibilities:
+  #
+  #   - Execute Jenkins Pipeline
+  #   - Checkout Marriott source code
+  #   - Execute Maven
+  #   - Execute TestNG suites
+  #   - Publish test results
+  #
+  # Jenkins UI:
+  #
+  #   http://localhost:8080
+  #
+  # Our local hostname:
+  #
+  #   http://jenkins:8080
+  #
+  # ==========================================================
+
+  jenkins:
+
+    # --------------------------------------------------------
+    # BUILD CUSTOM JENKINS IMAGE
+    # --------------------------------------------------------
+    #
+    # Instead of directly running:
+    #
+    #   jenkins/jenkins:lts-jdk21
+    #
+    # Docker Compose will build our custom Jenkins image
+    # using Dockerfile.jenkins.
+    #
+    # Dockerfile.jenkins adds Maven to the standard
+    # Jenkins + JDK 21 image.
+    #
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+
+
+    # --------------------------------------------------------
+    # CUSTOM IMAGE NAME
+    # --------------------------------------------------------
+    #
+    # After Docker builds Dockerfile.jenkins, the resulting
+    # image will receive this name/tag.
+    #
+    image: marriott-jenkins:lts-jdk21-maven
+
+
+    # --------------------------------------------------------
+    # CONTAINER NAME
+    # --------------------------------------------------------
+
+    container_name: marriott-jenkins
+
+
+    # --------------------------------------------------------
+    # PORT MAPPING
+    # --------------------------------------------------------
+    #
+    # HOST : CONTAINER
+    #
+    # 8080  -> Jenkins Web UI
+    # 50000 -> Jenkins inbound agents
+    #
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+
+
+    # --------------------------------------------------------
+    # PERSISTENT JENKINS STORAGE
+    # --------------------------------------------------------
+    #
+    # Jenkins stores:
+    #
+    #   - Users
+    #   - Jobs
+    #   - Plugins
+    #   - Credentials
+    #   - Build history
+    #   - Jenkins configuration
+    #
+    # under:
+    #
+    #   /var/jenkins_home
+    #
+    # The named volume keeps this information even if the
+    # Jenkins container is recreated.
+    #
+    volumes:
+      - jenkins_home:/var/jenkins_home
+
+
+    # --------------------------------------------------------
+    # RESTART POLICY
+    # --------------------------------------------------------
+
+    restart: unless-stopped
+
+
+    # --------------------------------------------------------
+    # DOCKER NETWORK
+    # --------------------------------------------------------
+    #
+    # Jenkins must share a network with Selenium Grid so
+    # eventually the automation framework can communicate
+    # with:
+    #
+    #   http://selenium-hub:4444
+    #
+    networks:
+      - marriott-automation-network
+
+
+  # ==========================================================
+  # SELENIUM GRID HUB
+  # ==========================================================
+  #
+  # Responsibilities:
+  #
+  #   - Receive RemoteWebDriver requests
+  #   - Manage Selenium browser nodes
+  #   - Route browser sessions
+  #
+  # Grid UI from Ubuntu:
+  #
+  #   http://localhost:4444
+  #
+  # Docker internal URL:
+  #
+  #   http://selenium-hub:4444
+  #
+  # ==========================================================
+
+  selenium-hub:
+
+    image: selenium/hub:4.47.0-20260808
+
+    container_name: marriott-selenium-hub
+
+
+    # --------------------------------------------------------
+    # SELENIUM PORTS
+    # --------------------------------------------------------
+    #
+    # 4442 -> Event Bus Publish
+    # 4443 -> Event Bus Subscribe
+    # 4444 -> WebDriver Endpoint + Grid UI
+    #
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+
+
+    restart: unless-stopped
+
+
+    networks:
+      - marriott-automation-network
+
+
+  # ==========================================================
+  # SELENIUM CHROME NODE
+  # ==========================================================
+  #
+  # Responsibilities:
+  #
+  #   - Register with Selenium Hub
+  #   - Start Chrome browser sessions
+  #   - Execute Selenium UI automation
+  #
+  # Jenkins does NOT need Chrome installed because Chrome
+  # runs inside this container.
+  #
+  # ==========================================================
+
+  chrome:
+
+    image: selenium/node-chrome:4.47.0-20260808
+
+    container_name: marriott-chrome-node
+
+
+    # --------------------------------------------------------
+    # SHARED MEMORY
+    # --------------------------------------------------------
+    #
+    # Chrome uses /dev/shm heavily.
+    #
+    # Increasing it helps prevent browser crashes during
+    # Selenium execution.
+    #
+    shm_size: "2gb"
+
+
+    # --------------------------------------------------------
+    # STARTUP DEPENDENCY
+    # --------------------------------------------------------
+    #
+    # Start Selenium Hub before starting the Chrome Node.
+    #
+    depends_on:
+      - selenium-hub
+
+
+    # --------------------------------------------------------
+    # SELENIUM GRID CONFIGURATION
+    # --------------------------------------------------------
+
+    environment:
+
+      # Selenium Hub service name
+      SE_EVENT_BUS_HOST: selenium-hub
+
+      # Selenium Event Bus ports
+      SE_EVENT_BUS_PUBLISH_PORT: 4442
+      SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+
+      # Start with one browser session at a time
+      SE_NODE_MAX_SESSIONS: 1
+
+      # Explicitly honor our configured session count
+      SE_NODE_OVERRIDE_MAX_SESSIONS: "true"
+
+
+    restart: unless-stopped
+
+
+    networks:
+      - marriott-automation-network
+
+
+# ============================================================
+# DOCKER NETWORK
+# ============================================================
+#
+# All three containers share this network:
+#
+#   marriott-jenkins
+#   marriott-selenium-hub
+#   marriott-chrome-node
+#
+# Docker provides internal DNS resolution using service names.
+#
+# Therefore Jenkins-side automation can eventually connect to:
+#
+#   http://selenium-hub:4444
+#
+# instead of using localhost.
+#
+# ============================================================
+
+networks:
+
+  marriott-automation-network:
+
+    driver: bridge
+
+
+# ============================================================
+# DOCKER VOLUMES
+# ============================================================
+#
+# Persistent Jenkins storage.
+#
+# IMPORTANT:
+#
+# Do not normally run:
+#
+#   docker compose down -v
+#
+# because -v removes named volumes.
+#
+# ============================================================
+
+volumes:
+
+  jenkins_home:

@@ -1,0 +1,58 @@
+# ============================================================
+# Marriott Automation - Custom Jenkins Image
+# ============================================================
+#
+# Purpose:
+# Extend the official Jenkins LTS image so the Jenkins
+# controller has Maven available for the Marriott
+# automation pipeline.
+#
+# Base image includes:
+#   - Jenkins LTS
+#   - JDK 21
+#
+# Additional tool installed here:
+#   - Maven
+#
+# ============================================================
+
+
+# ============================================================
+# BASE IMAGE
+# ============================================================
+
+FROM jenkins/jenkins:lts-jdk21
+
+
+# ============================================================
+# TEMPORARILY SWITCH TO ROOT
+# ============================================================
+#
+# Package installation requires elevated privileges.
+#
+USER root
+
+
+# ============================================================
+# INSTALL MAVEN
+# ============================================================
+#
+# 1. Refresh package metadata
+# 2. Install Maven
+# 3. Clean apt cache
+# 4. Remove package-list files to keep image smaller
+#
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends maven && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# ============================================================
+# RETURN TO JENKINS USER
+# ============================================================
+#
+# Jenkins should run as the normal Jenkins user,
+# not as root.
+#
+USER jenkins

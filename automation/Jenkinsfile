@@ -1,0 +1,477 @@
+/*
+ * ============================================================
+ * MARRIOTT AUTOMATION - JENKINS CI PIPELINE
+ * ============================================================
+ *
+ * Framework:
+ *   - Java
+ *   - Selenium WebDriver
+ *   - TestNG
+ *   - Maven
+ *
+ * Test Suite:
+ *   automation/ui-tests/src/test/resources/
+ *   marriottUIRegressionTests.xml
+ *
+ * Pipeline Settings:
+ *   automation/ui-tests/settings/pipeline/
+ *   marriott-dev-settings.xml
+ *
+ * Current Regression Classes:
+ *   - SignInTest
+ *   - ActivateOnlineAccountTest
+ *   - LookUpMemberNumberTest
+ *
+ * ============================================================
+ */
+
+pipeline {
+
+    /*
+     * ========================================================
+     * AGENT
+     * ========================================================
+     *
+     * Run this Pipeline on an available Jenkins node.
+     *
+     * Currently this will use our Jenkins environment.
+     */
+    agent any
+
+
+    /*
+     * ========================================================
+     * OPTIONS
+     * ========================================================
+     */
+
+    options {
+
+        /*
+         * Add timestamps to every Jenkins console message.
+         */
+        timestamps()
+
+        /*
+         * Prevent two builds of this same Pipeline
+         * from running simultaneously.
+         *
+         * We already enabled this in the Jenkins UI,
+         * but keeping it in the Jenkinsfile also makes
+         * the behavior version-controlled.
+         */
+        disableConcurrentBuilds()
+
+        /*
+         * Keep Jenkins build history under control.
+         */
+        buildDiscarder(
+            logRotator(
+                daysToKeepStr: '14',
+                numToKeepStr: '20'
+            )
+        )
+    }
+
+
+    /*
+     * ========================================================
+     * ENVIRONMENT VARIABLES
+     * ========================================================
+     *
+     * Central location for values used by our Pipeline.
+     *
+     * Later we can convert some of these into
+     * Jenkins parameters.
+     */
+
+    environment {
+
+        AUTOMATION_DIRECTORY = 'automation'
+
+        UI_MODULE = 'ui-tests'
+
+        TEST_MODE = 'pipeline'
+
+        TEST_ENVIRONMENT = 'marriott-dev'
+
+        TEST_SUITE = 'src/test/resources/marriottUIRegressionTests.xml'
+    }
+
+
+    /*
+     * ========================================================
+     * PIPELINE STAGES
+     * ========================================================
+     */
+
+    stages {
+
+
+        /*
+         * ====================================================
+         * STAGE 1 - CHECKOUT SOURCE CODE
+         * ====================================================
+         */
+
+        stage('Checkout Source Code') {
+
+            steps {
+
+                echo 'Step-1: Checkout Marriott Automation source code'
+
+                /*
+                 * Uses the Git repository and branch configured
+                 * under:
+                 *
+                 * Pipeline script from SCM
+                 */
+                checkout scm
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 2 - WORKSPACE VALIDATION
+         * ====================================================
+         */
+
+        stage('Validate Workspace') {
+
+            steps {
+
+                echo 'Step-2: Validate Jenkins workspace'
+
+                sh '''
+                    echo "============================================="
+                    echo "JENKINS WORKSPACE INFORMATION"
+                    echo "============================================="
+
+                    echo ""
+                    echo "Current User:"
+                    whoami
+
+                    echo ""
+                    echo "Current Directory:"
+                    pwd
+
+                    echo ""
+                    echo "Repository Contents:"
+                    ls -la
+
+                    echo ""
+                    echo "Automation Directory Contents:"
+                    ls -la automation
+                '''
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 3 - JAVA VALIDATION
+         * ====================================================
+         */
+
+        stage('Verify Java') {
+
+            steps {
+
+                echo 'Step-3: Verify Java installation'
+
+                sh '''
+                    echo "============================================="
+                    echo "JAVA VERSION"
+                    echo "============================================="
+
+                    java --version
+                '''
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 4 - GIT VALIDATION
+         * ====================================================
+         */
+
+        stage('Verify Git') {
+
+            steps {
+
+                echo 'Step-4: Verify Git installation'
+
+                sh '''
+                    echo "============================================="
+                    echo "GIT VERSION"
+                    echo "============================================="
+
+                    git --version
+                '''
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 5 - MAVEN VALIDATION
+         * ====================================================
+         */
+
+        stage('Verify Maven') {
+
+            steps {
+
+                echo 'Step-5: Verify Maven installation'
+
+                sh '''
+                    echo "============================================="
+                    echo "MAVEN VERSION"
+                    echo "============================================="
+
+                    mvn --version
+                '''
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 6 - VERIFY MAVEN PROJECT
+         * ====================================================
+         *
+         * Confirm Jenkins can see the parent pom.xml
+         * and ui-tests child module.
+         */
+
+        stage('Validate Maven Project') {
+
+            steps {
+
+                echo 'Step-6: Validate Marriott Maven project structure'
+
+                dir("${AUTOMATION_DIRECTORY}") {
+
+                    sh '''
+                        echo "============================================="
+                        echo "MARRIOTT MAVEN PROJECT"
+                        echo "============================================="
+
+                        echo ""
+                        echo "Current Maven Directory:"
+                        pwd
+
+                        echo ""
+                        echo "Parent POM:"
+                        ls -l pom.xml
+
+                        echo ""
+                        echo "UI Module:"
+                        ls -ld ui-tests
+
+                        echo ""
+                        echo "TestNG Suite:"
+                        ls -l ui-tests/src/test/resources/marriottUIRegressionTests.xml
+                    '''
+                }
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 7 - MAVEN COMPILE
+         * ====================================================
+         *
+         * Compile before running the Selenium regression suite.
+         */
+
+        stage('Compile Marriott UI Automation') {
+
+            steps {
+
+                echo 'Step-7: Compile Marriott UI Automation project'
+
+                dir("${AUTOMATION_DIRECTORY}") {
+
+                    sh '''
+                        mvn clean compile \
+                        -pl ui-tests
+                    '''
+                }
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 8 - RUN UI REGRESSION SUITE
+         * ====================================================
+         *
+         * This is the exact Maven execution pattern
+         * that we successfully validated locally.
+         *
+         * mode=pipeline tells our framework to use:
+         *
+         * ui-tests/settings/pipeline/
+         * marriott-dev-settings.xml
+         *
+         * The pipeline settings should contain
+         * headless=true.
+         */
+
+        stage('Run Marriott UI Regression Tests') {
+
+            steps {
+
+                echo 'Step-8: Execute Marriott UI Regression TestNG Suite'
+
+                dir("${AUTOMATION_DIRECTORY}") {
+
+                    sh """
+                        mvn clean test \
+                        -pl ${UI_MODULE} \
+                        -Dmode=${TEST_MODE} \
+                        -Denvironment=${TEST_ENVIRONMENT} \
+                        -Dsurefire.suiteXmlFiles=${TEST_SUITE}
+                    """
+                }
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 9 - PUBLISH TEST RESULTS
+         * ====================================================
+         *
+         * Maven Surefire creates XML result files under:
+         *
+         * ui-tests/target/surefire-reports/
+         *
+         * Jenkins reads those XML files and displays
+         * pass/fail test information in the build UI.
+         */
+
+        stage('Publish Test Results') {
+
+            steps {
+
+                echo 'Step-9: Publish Marriott automation test results'
+
+                junit allowEmptyResults: true,
+                      testResults: 'automation/ui-tests/target/surefire-reports/*.xml'
+            }
+        }
+
+
+        /*
+         * ====================================================
+         * STAGE 10 - BUILD SUMMARY
+         * ====================================================
+         */
+
+        stage('Pipeline Summary') {
+
+            steps {
+
+                echo 'Step-10: Marriott Automation Pipeline completed'
+
+                sh '''
+                    echo "============================================="
+                    echo "MARRIOTT AUTOMATION PIPELINE SUMMARY"
+                    echo "============================================="
+
+                    echo ""
+                    echo "Mode: pipeline"
+                    echo "Environment: marriott-dev"
+                    echo "Module: ui-tests"
+
+                    echo ""
+                    echo "Suite:"
+                    echo "marriottUIRegressionTests.xml"
+
+                    echo ""
+                    echo "Pipeline execution stages completed."
+                '''
+            }
+        }
+    }
+
+
+    /*
+     * ========================================================
+     * POST BUILD ACTIONS
+     * ========================================================
+     *
+     * These run after the Pipeline stages finish.
+     */
+
+    post {
+
+
+        /*
+         * Always execute regardless of PASS or FAIL.
+         */
+        always {
+
+            echo 'Marriott Automation Pipeline execution finished.'
+
+            /*
+             * Try publishing Surefire results again in post.
+             *
+             * This is useful if the Test stage fails because
+             * Jenkins can still collect whatever results Maven
+             * already generated.
+             */
+            junit allowEmptyResults: true,
+                  testResults: 'automation/ui-tests/target/surefire-reports/*.xml'
+        }
+
+
+        /*
+         * Pipeline passed.
+         */
+        success {
+
+            echo '''
+            ===================================================
+            MARRIOTT AUTOMATION PIPELINE: SUCCESS
+            ===================================================
+
+            UI Regression Suite completed successfully.
+
+            ===================================================
+            '''
+        }
+
+
+        /*
+         * Pipeline failed.
+         */
+        failure {
+
+            echo '''
+            ===================================================
+            MARRIOTT AUTOMATION PIPELINE: FAILURE
+            ===================================================
+
+            Review the Jenkins Console Output and
+            Surefire/TestNG reports for failure details.
+
+            ===================================================
+            '''
+        }
+
+
+        /*
+         * Build was manually stopped.
+         */
+        aborted {
+
+            echo 'Marriott Automation Pipeline was aborted.'
+        }
+    }
+}
