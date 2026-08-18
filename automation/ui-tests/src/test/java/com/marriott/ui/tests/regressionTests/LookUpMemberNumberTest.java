@@ -27,8 +27,8 @@ private SignInPage signInPage;
 private ActivateOnlineAccountPage activateOnlineAccountPage;
 private LookUpMemberNumberPage lookUpMemberNumberPage;
 
-private static final String EMAIL = "sabiha.test@example.com";
-private static final String FIRST_NAME = "Sabiha";
+private static final String EMAIL = "sabiha123.test@example.com";
+private static final String FIRST_NAME = "Sabiha Akther";
 private static final String LAST_NAME = "Rahman";
 
 

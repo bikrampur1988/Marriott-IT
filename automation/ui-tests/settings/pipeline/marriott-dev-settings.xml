@@ -6,18 +6,34 @@
 
     <ui>
 
+        <!-- Browser used by the Selenium tests -->
         <browser>chrome</browser>
 
+        <!-- Jenkins/Grid execution should run without a visible browser -->
         <headless>true</headless>
 
+        <!-- Window maximize is unnecessary for headless execution -->
         <maximize>false</maximize>
 
+        <!-- Selenium waits -->
         <implicitWait>0</implicitWait>
 
         <explicitWait>20</explicitWait>
 
         <pageLoadTimeout>60</pageLoadTimeout>
 
+        <!--
+            Selenium Grid URL.
+
+            Jenkins, Selenium Hub, and Chrome Node are running
+            on the same Docker network.
+
+            Docker resolves the service name:
+            selenium-hub
+        -->
+        <gridUrl>http://selenium-hub:4444</gridUrl>
+
+        <!-- Marriott application URL -->
         <baseUrl>https://www.marriott.com/credit-cards.mi?trafficSource=paidSearch&amp;updateBoundless=6TNY&amp;updateBold=6TNY&amp;updatebrilliant=153&amp;updatebusiness=67&amp;updatebevy=155&amp;updateCompBoundless=6TNY&amp;updateCompBold=6TNY&amp;updateCompBrilliant=2097&amp;updateCompBusiness=2048&amp;updateCompBevy=2111&amp;nst=paid&amp;cid=PAI_GLB00037IS_GLE000BHN7_GLF000OC7V&amp;gclsrc=aw.ds&amp;gad_source=1&amp;gad_campaignid=20638696794&amp;gbraid=0AAAAAoWN_hZP0Tklg-obD5ytJ4NSYpu7L&amp;gclid=Cj0KCQjw9ZLSBhCcARIsAEhGKgNSX_JTPxJDimWHeMuHuJ997ZWR8M_jmJXAPE0zjRZ3sz2pWo1Wg10aAqHWEALw_wcB</baseUrl>
 
     </ui>
